@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Sənə Uyğun Kursu Tapaq</title>
+<meta name="description" content="Bir neçə sualla sənə ən uyğun kurs yolunu quraq.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+/* ============================================================
+   AYARLAR — sualları, kateqoriyaları və WhatsApp nömrənizi
+   dəyişmək üçün faylın sonundakı <script> hissəsinə baxın.
+   ============================================================ */
+
+:root{
+  --bg: #FBF9F5;
+  --bg-soft: #F4EFE6;
+  --surface: #FFFFFF;
+  --surface-2: #F6F2EA;
+  --line: rgba(34,30,38,0.09);
+  --line-strong: rgba(34,30,38,0.16);
+  --accent: #2F6E4E;
+  --accent-light: #4F9873;
+  --accent-dim: #234F38;
+  --gold: #A9835B;
+  --gold-light: #C7A57D;
+  --text: #221F26;
+  --text-muted: #665E70;
+  --text-dim: #9992A0;
+  --radius: 16px;
+  --shadow-sm: 0 6px 20px rgba(43,37,48,0.05);
+  --shadow: 0 24px 60px rgba(43,37,48,0.09);
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --ease-pop: cubic-bezier(.34,1.45,.64,1);
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x:hidden;
+}
+
+.serif{ font-family:'Fraunces', serif; }
+.mono{ font-family:'IBM Plex Mono', monospace; letter-spacing:0.07em; }
+
+/* ---------- Atmosfer fonu ---------- */
+.bg-atmosphere{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(46% 38% at 12% 8%, rgba(47,110,78,0.07), transparent 60%),
+    radial-gradient(40% 34% at 92% 88%, rgba(169,131,91,0.09), transparent 60%),
+    var(--bg);
+}
+.bg-atmosphere::after{
+  content:"";
+  position:absolute; inset:0;
+  background-image: radial-gradient(rgba(34,30,38,0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity:0.6;
+}
+
+/* ---------- Layout ---------- */
+.app{
+  position:relative; z-index:1;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 28px clamp(20px, 5vw, 56px) 0;
+}
+.brand{
+  font-family:'Fraunces', serif;
+  font-weight:500;
+  font-size:1.05rem;
+  letter-spacing:0.01em;
+  color: var(--text);
+  display:flex; align-items:center; gap:10px;
+}
+.brand .dot{
+  width:7px; height:7px; border-radius:50%;
+  background: var(--accent);
+}
+.step-count{
+  font-size:0.72rem;
+  color: var(--text-dim);
+}
+
+.stage{
+  flex:1;
+  display:flex;
+  gap: clamp(24px, 5vw, 64px);
+  padding: clamp(24px, 5vw, 56px);
+  align-items: stretch;
+}
+
+/* ---------- İmza elementi: "Yol" göstəricisi ---------- */
+.path-rail{
+  width: 60px;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top: 8px;
+}
+.path-track{
+  position:relative;
+  flex:1;
+  width:1px;
+  background: var(--line-strong);
+  margin: 6px 0;
+}
+.path-fill{
+  position:absolute;
+  top:0; left:0; width:100%;
+  background: linear-gradient(180deg, var(--accent), var(--gold));
+  transition: height 0.7s var(--ease);
+}
+.path-node{
+  position:absolute;
+  left:50%; transform:translate(-50%,-50%) scale(1);
+  width:11px; height:11px;
+  border-radius:50%;
+  background: var(--surface);
+  border: 1.5px solid var(--line-strong);
+  transition: border-color 0.4s var(--ease), background 0.4s var(--ease), transform 0.45s var(--ease-pop);
+}
+.path-node.done{
+  border-color: var(--accent);
+  background: var(--accent);
+  transform: translate(-50%,-50%) scale(1.05);
+}
+.path-node.done::after{
+  content:"";
+  position:absolute;
+  left:50%; top:44%;
+  width:3px; height:5.5px;
+  border: solid #FFFFFF;
+  border-width: 0 1.4px 1.4px 0;
+  transform: translate(-50%,-55%) rotate(45deg);
+}
+.path-node.active{
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.path-node.active::after{
+  content:"";
+  position:absolute; inset:3px;
+  border-radius:50%;
+  background: var(--accent);
+}
+@media (max-width: 780px){
+  .path-rail{ display:none; }
+}
+
+/* ---------- Kart sahəsi ---------- */
+.card-wrap{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.card{
+  width:100%;
+  max-width: 640px;
+}
+
+.eyebrow{
+  font-size:0.76rem;
+  text-transform:uppercase;
+  letter-spacing:0.16em;
+  color: var(--accent);
+  margin: 0 0 16px;
+  font-weight:500;
+}
+
+h1.q{
+  font-family:'Fraunces', serif;
+  font-weight:500;
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+  line-height:1.22;
+  margin: 0 0 12px;
+  letter-spacing:-0.01em;
+  color: var(--text);
+}
+p.sub{
+  color: var(--text-muted);
+  font-size:1.02rem;
+  line-height:1.6;
+  margin: 0 0 36px;
+  max-width: 52ch;
+}
+
+/* ---------- Seçim düymələri ---------- */
+.options{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.options.scrollable{
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-right: -8px;
+}
+.options.scrollable::-webkit-scrollbar{ width:5px; }
+.options.scrollable::-webkit-scrollbar-track{ background: transparent; }
+.options.scrollable::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:3px; }
+.opt{
+  display:flex; align-items:center; gap:16px;
+  width:100%;
+  text-align:left;
+  padding: 18px 22px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-family:'Inter', sans-serif;
+  font-size:1rem;
+  font-weight:500;
+  cursor:pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.25s var(--ease), box-shadow 0.25s var(--ease), transform 0.25s var(--ease);
+  opacity:0;
+  transform: translateY(8px);
+  animation: opt-in 0.5s var(--ease) forwards;
+}
+@keyframes opt-in{
+  to{ opacity:1; transform:translateY(0); }
+}
+.opt:hover{
+  border-color: var(--accent-light);
+  box-shadow: 0 10px 26px rgba(43,37,48,0.09);
+  transform: translateY(-1px);
+}
+.opt:focus-visible{
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.opt .idx{
+  font-family:'IBM Plex Mono', monospace;
+  font-size:0.72rem;
+  color: var(--text-dim);
+  width:20px;
+  flex-shrink:0;
+}
+.opt.selected{
+  border-color: var(--accent);
+  background: linear-gradient(90deg, rgba(47,110,78,0.06), rgba(169,131,91,0.04));
+}
+.opt.selected .idx{ color: var(--accent); }
+
+/* ---------- Formalar ---------- */
+.field{
+  margin-bottom:18px;
+}
+.field label{
+  display:block;
+  font-size:0.8rem;
+  color: var(--text-muted);
+  margin-bottom:8px;
+}
+.field input{
+  width:100%;
+  padding: 17px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-family:'Inter', sans-serif;
+  font-size:1rem;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s var(--ease);
+}
+.field input::placeholder{ color: var(--text-dim); }
+.field input:focus{
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ---------- Naviqasiya ---------- */
+.nav-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+.btn{
+  border:none; cursor:pointer;
+  font-family:'Inter', sans-serif;
+  font-weight:600;
+  font-size:0.95rem;
+  border-radius: 999px;
+  padding: 16px 30px;
+  transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease), opacity 0.2s var(--ease), background 0.25s var(--ease);
+}
+.btn:active{ transform: scale(0.97); }
+.btn-primary{
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 14px 30px rgba(34,30,38,0.18);
+}
+.btn-primary:hover{ background: var(--accent-dim); box-shadow: 0 16px 34px rgba(34,30,38,0.22); }
+.btn-primary:disabled{
+  opacity:0.32; cursor:not-allowed; box-shadow:none;
+}
+.btn-ghost{
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--line-strong);
+  padding: 16px 24px;
+}
+.btn-ghost:hover{ color: var(--text); border-color: var(--text-dim); }
+
+.btn-whatsapp{
+  display:inline-flex; align-items:center; gap:12px;
+  background: var(--accent);
+  color: #FFFFFF;
+  font-weight:600;
+  box-shadow: 0 16px 34px rgba(47,110,78,0.28);
+  text-decoration:none;
+}
+.btn-whatsapp:hover{ background: var(--accent-dim); box-shadow: 0 18px 38px rgba(47,110,78,0.34); }
+
+/* ---------- Xoş gəlmisiniz ekranı ---------- */
+.hero-badge{
+  display:inline-flex; align-items:center; gap:8px;
+  padding: 8px 16px;
+  border-radius:999px;
+  border:1px solid var(--line-strong);
+  background: var(--surface);
+  font-size:0.78rem;
+  color: var(--text-muted);
+  margin-bottom:26px;
+  box-shadow: var(--shadow-sm);
+}
+.hero-badge .badge-icon{
+  color: var(--accent);
+  display:flex;
+  flex-shrink:0;
+}
+
+/* ---------- Tədricən açılma (premium giriş) ---------- */
+.reveal{
+  opacity:0;
+  transform: translateY(10px);
+  animation: reveal-in 0.7s var(--ease) forwards;
+}
+@keyframes reveal-in{
+  to{ opacity:1; transform: translateY(0); }
+}
+
+/* ---------- Premium işıq keçidi (CTA üzərində) ---------- */
+.btn-whatsapp{
+  position: relative;
+  overflow: hidden;
+}
+.btn-whatsapp::before{
+  content:"";
+  position:absolute;
+  top:0; left:-60%;
+  width:40%; height:100%;
+  background: linear-gradient(115deg, transparent, rgba(255,255,255,0.32), transparent);
+  animation: shine-sweep 3.6s ease-in-out infinite;
+}
+@keyframes shine-sweep{
+  0%{ left:-60%; }
+  35%{ left:130%; }
+  100%{ left:130%; }
+}
+
+/* ---------- Möhür ikonu (nəticə ekranı) ---------- */
+.seal{
+  width:56px; height:56px;
+  margin-bottom:22px;
+}
+.seal circle{
+  fill:none;
+  stroke: var(--accent);
+  stroke-width:1.4;
+  stroke-linecap:round;
+  stroke-dasharray: 176;
+  stroke-dashoffset: 176;
+  animation: seal-draw 0.9s var(--ease) forwards 0.1s;
+}
+.seal path{
+  fill:none;
+  stroke: var(--accent);
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: seal-draw 0.5s var(--ease) forwards 0.85s;
+}
+@keyframes seal-draw{
+  to{ stroke-dashoffset:0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .btn-whatsapp::before{ animation:none; display:none; }
+}
+
+/* ---------- Nəticə ekranı ---------- */
+.result-summary{
+  display:flex; flex-direction:column; gap:2px;
+  margin: 28px 0 32px;
+  padding: 6px 24px;
+  border-radius: var(--radius);
+  border:1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.result-row{
+  display:flex; justify-content:space-between; gap:16px;
+  font-size:0.92rem;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+}
+.result-row:last-child{ border-bottom:none; }
+.result-row .k{ color: var(--text-dim); }
+.result-row .v{ color: var(--text); font-weight:500; text-align:right; }
+
+/* ---------- Keçid animasiyaları ---------- */
+.step-view{
+  animation: rise 0.55s var(--ease);
+}
+@keyframes rise{
+  from{ opacity:0; transform: translateY(10px) scale(0.994); }
+  to{ opacity:1; transform: translateY(0) scale(1); }
+}
+
+footer{
+  text-align:center;
+  padding: 20px;
+  font-size:0.72rem;
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+@media (max-width: 560px){
+  .stage{ padding: 18px; }
+  .opt{ padding:16px 18px; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-atmosphere"></div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span> Kurs Yolu</div>
+    <div class="step-count mono" id="stepCount"></div>
+  </div>
+
+  <div class="stage">
+    <div class="path-rail" id="pathRail"></div>
+    <div class="card-wrap">
+      <div class="card" id="cardRoot"></div>
+    </div>
+  </div>
+
+  <footer>Cavablarınız yalnız sizə uyğun kursu seçmək üçün istifadə olunur.</footer>
+</div>
+
+<script>
+/* ================================================================
+   KONFİQURASİYA — saytı özünüzə görə uyğunlaşdırmaq üçün
+   sadəcə bu hissəni dəyişin. Kod bilmədən də redaktə edə bilərsiniz.
+   ================================================================ */
+
+/* ---------- 1. Kateqoriyalar və alt kateqoriyalar ----------
+   Yeni sahə əlavə etmək üçün sadəcə aşağıya yeni bir { key, label, subcategories } obyekti əlavə edin. */
+const CATEGORIES = [
+  { key: "karyera", label: "Karyera", subcategories: [
+    "Proses Mühəndisliyi","Kimya Mühəndisliyi","Neft və Qaz","Mexanika Mühəndisliyi","Elektrik Mühəndisliyi",
+    "İnşaat Mühəndisliyi","Avtomatlaşdırma","Qida Sənayesi","Laboratoriya","Farmasiya","Tibb","Tibb Bacısı",
+    "Mühasibat","Maliyyə","HR","Satış","Marketinq","Logistika","Təchizat (Procurement)","Pedaqoji","Hüquq",
+    "Dövlət Qulluğu","Memarlıq","Daxili Dizayn","Turizm","Otelçilik","Aviasiya","Dənizçilik","Digər"
+  ]},
+  { key: "it", label: "İT və Proqramlaşdırma", subcategories: [
+    "Frontend","Backend","Full Stack","Python","Java","C#","JavaScript","Mobile Development","Flutter","Android",
+    "iOS","Data Analyst","Data Science","Machine Learning","AI","Cyber Security","DevOps","QA Testing",
+    "UI/UX Design","WordPress","No Code","SQL","Cloud","SAP","Digər"
+  ]},
+  { key: "gelir", label: "Onlayn Gəlir Mənbələri", subcategories: [
+    "E-commerce","Shopify","Amazon FBA","Etsy","Dropshipping","Print on Demand","TikTok Shop",
+    "Affiliate Marketing","Freelance","Upwork","Fiverr","Copywriting","Content Creator","YouTube","Instagram",
+    "TikTok","Blogging","SEO","Email Marketing","Kriptovalyuta","Trading","Forex","Investing","Passive Income",
+    "AI ilə Pul Qazanmaq","Digital Product","Notion Template","Canva Design","Prompt Engineering"
+  ]},
+  { key: "dil", label: "Xarici Dillər", subcategories: [
+    "İngilis dili","Alman dili","Rus dili","Fransız dili","İspan dili","İtalyan dili","Türk dili","Ərəb dili",
+    "Çin dili","Yapon dili","Koreya dili","IELTS","TOEFL","Duolingo Test","Goethe","TestDaF","TELC"
+  ]},
+  { key: "biznes", label: "Biznes", subcategories: [
+    "Biznes Qurmaq","Startup","Şəxsi Brend","Satış","Marketinq","Digital Marketing","Performance Marketing",
+    "SMM","Facebook Ads","Google Ads","SEO","CRM","Brendinq","Liderlik","Menecment","Layihə İdarəetməsi",
+    "Scrum","PMP"
+  ]},
+  { key: "dizayn", label: "Dizayn və Yaradıcılıq", subcategories: [
+    "Photoshop","Illustrator","Figma","Canva","Motion Design","Video Editing","Premiere Pro","After Effects",
+    "Blender","3D","AutoCAD","Revit","SketchUp","Fotoqrafiya","Videografiya"
+  ]},
+  { key: "inkisaf", label: "Şəxsi İnkişaf", subcategories: [
+    "Vaxtın İdarə Olunması","Ünsiyyət","Nitq","Məntiq","Yaddaş","Oxuma Texnikaları","Psixologiya","Liderlik",
+    "Motivasiya","Məhsuldarlıq","Stressin İdarə Olunması"
+  ]},
+  { key: "xaricde", label: "Xaricdə Təhsil və Karyera", subcategories: [
+    "Almaniya Ausbildung","Almaniyada Universitet","ABŞ","Kanada","İngiltərə","Polşa","Macarıstan","Erasmus",
+    "Work and Travel","Vizalar","CV Hazırlanması","LinkedIn","Müsahibəyə Hazırlıq"
+  ]},
+  { key: "ofis", label: "Ofis Proqramları", subcategories: [
+    "Excel","Advanced Excel","Power BI","Tableau","PowerPoint","Word","Outlook","Microsoft 365"
+  ]},
+  { key: "usaqlar", label: "Uşaqlar üçün", subcategories: [
+    "Robototexnika","Scratch","Python Kids","İngilis dili (uşaqlar)","Riyaziyyat","Məntiq","Şahmat"
+  ]}
+];
+
+/* ---------- 2. Məqsəd sualları ----------
+   Konkret alt kateqoriya üçün xüsusi məqsəd variantları (istəsəniz daha çox əlavə edin).
+   Siyahıda olmayan alt kateqoriyalar üçün aşağıdakı "kateqoriya üzrə standart" siyahılar işə düşür. */
+const ENGINEERING_GOALS = [
+  "İlk işimi tapmaq","Maaşımı artırmaq","Xaricdə işləmək","Sertifikat almaq","Biliklərimi yeniləmək"
+];
+const GOAL_OVERRIDES = {
+  "İngilis dili": ["İş üçün","Xaricə köçmək üçün","IELTS hazırlığı","Universitet üçün","Gündəlik danışıq","Sadəcə öyrənmək"],
+  "Python": ["İş tapmaq","Data Analysis","Süni intellekt (AI)","Web Development","Avtomatlaşdırma","Maraq üçün"],
+  "Kriptovalyuta": ["Trading","Uzunmüddətli investisiya","Blockchain öyrənmək","Web3-də işləmək","Sadəcə məlumat almaq"],
+  "Proses Mühəndisliyi": ENGINEERING_GOALS,
+  "Kimya Mühəndisliyi": ENGINEERING_GOALS,
+  "Neft və Qaz": ENGINEERING_GOALS,
+  "Mexanika Mühəndisliyi": ENGINEERING_GOALS,
+  "Elektrik Mühəndisliyi": ENGINEERING_GOALS,
+  "İnşaat Mühəndisliyi": ENGINEERING_GOALS,
+  "Avtomatlaşdırma": ENGINEERING_GOALS
+};
+// Alt kateqoriya üçün xüsusi sual siyahısı yoxdursa, kateqoriyaya görə bu siyahılardan biri istifadə olunur
+const CATEGORY_DEFAULT_GOALS = {
+  karyera: ["İlk işimi tapmaq","Vəzifəmi / maaşımı artırmaq","Sahəni dəyişmək","Sertifikat almaq","Biliklərimi təzələmək"],
+  it: ["İş tapmaq","Sahə dəyişmək","Layihə üçün bacarıq qazanmaq","Freelance işləmək","Maraq üçün öyrənmək"],
+  gelir: ["Əlavə gəlir yaratmaq","Əsas gəlir mənbəyi qurmaq","Öz brendimi qurmaq","Bu sahədə işə düzəlmək","Sadəcə öyrənmək"],
+  dil: ["İş üçün","Xaricə köçmək üçün","Sertifikat / imtahan üçün","Təhsil üçün","Gündəlik danışıq üçün"],
+  biznes: ["Öz biznesimi qurmaq","Mövcud biznesimi böyütmək","İşimdə irəli getmək","Yeni bacarıq qazanmaq","Komandamı idarə etmək"],
+  dizayn: ["Peşəkar olaraq işləmək","Freelance layihələr almaq","Öz layihələrim üçün","Portfolio hazırlamaq","Maraq üçün öyrənmək"],
+  inkisaf: ["Şəxsi inkişaf üçün","İş həyatımda tətbiq etmək","Özümə inam qazanmaq","Vərdişlərimi dəyişmək","Ünsiyyət bacarıqlarımı artırmaq"],
+  xaricde: ["Xaricdə oxumaq","Xaricdə işləmək","Sənədləri hazırlamaq","Prosesi düzgün planlamaq","Sadəcə məlumat toplamaq"],
+  ofis: ["İş üçün lazımdır","Yeni işə hazırlaşıram","Hesabatlarımı yaxşılaşdırmaq","CV-mə bacarıq əlavə etmək","Maraq üçün öyrənmək"],
+  usaqlar: ["Məktəb üçün dəstək","Yeni bacarıq qazandırmaq","Məntiqi düşüncəni inkişaf etdirmək","Gələcək karyeraya hazırlıq","Sadəcə maraq üçün"]
+};
+const DEFAULT_GOALS = ["Yeni bacarıq qazanmaq","İş imkanlarımı artırmaq","Öz üzərimdə işləmək","Sadəcə öyrənmək üçün"];
+
+function findCategory(label){ return CATEGORIES.find(c => c.label === label); }
+function subcategoriesFor(answers){
+  const cat = findCategory(answers.category);
+  return cat ? cat.subcategories : [];
+}
+function goalsFor(answers){
+  if(GOAL_OVERRIDES[answers.subcategory]) return GOAL_OVERRIDES[answers.subcategory];
+  const cat = findCategory(answers.category);
+  if(cat && CATEGORY_DEFAULT_GOALS[cat.key]) return CATEGORY_DEFAULT_GOALS[cat.key];
+  return DEFAULT_GOALS;
+}
+
+/* ---------- 3. Əsas ayarlar ---------- */
+const CONFIG = {
+
+  // Sizin WhatsApp nömrəniz — ölkə kodu ilə, + işarəsi VƏ boşluqsuz
+  // Məsələn Azərbaycan üçün: 994501234567
+  whatsappNumber: "994501234567",
+
+  // Xoş gəlmisiniz ekranı
+  welcome: {
+    badge: "Fərdi kurs təklifi",
+    title: "Sənə ən uyğun kursu birlikdə tapaq",
+    subtitle: "Bir neçə sadə sualı cavablandır, sənin sahənə, məqsədinə və səviyyənə uyğun kurs təklifini birbaşa WhatsApp-a göndərək.",
+    button: "Başla"
+  },
+
+  // Sual addımları — sırası "Kateqoriya → Alt kateqoriya → Məqsəd → Səviyyə → Vaxt → Büdcə → Format" şəklindədir
+  steps: [
+    {
+      key: "category",
+      question: "Hansı sahədə inkişaf etmək istəyirsən?",
+      subtitle: "Ən çox maraqlandığın istiqaməti seç.",
+      summaryLabel: "Sahə",
+      options: () => CATEGORIES.map(c => c.label)
+    },
+    {
+      key: "subcategory",
+      question: "Daha dəqiq desək, hansı mövzuda?",
+      subtitle: "Seçdiyin sahə üzrə dəqiq istiqaməti bildir.",
+      summaryLabel: "Mövzu",
+      options: (answers) => subcategoriesFor(answers)
+    },
+    {
+      key: "goal",
+      question: "Bu sahədə əsas məqsədin nədir?",
+      subtitle: "Məqsədinə görə ən uyğun proqramı təklif edəcəyik.",
+      summaryLabel: "Məqsəd",
+      options: (answers) => goalsFor(answers)
+    },
+    {
+      key: "seviyye",
+      question: "Hazırkı səviyyən necədir?",
+      subtitle: "Bu, sənə uyğun başlanğıc nöqtəsini müəyyən etməyə kömək edir.",
+      summaryLabel: "Səviyyə",
+      options: [
+        "Yeni başlayıram",
+        "Bir az təcrübəm var",
+        "Orta səviyyədəyəm",
+        "İrəli səviyyədəyəm"
+      ]
+    },
+    {
+      key: "vaxt",
+      question: "Həftədə təhsilə neçə saat ayıra bilərsən?",
+      subtitle: "Tempi sənin qrafikinə uyğunlaşdıraq.",
+      summaryLabel: "Həftəlik vaxt",
+      options: [
+        "1–2 saat",
+        "3–5 saat",
+        "5 saatdan çox",
+        "Hələ dəqiq deyil"
+      ]
+    },
+    {
+      key: "budce",
+      question: "Kurs üçün təxmini büdcən nə qədərdir?",
+      subtitle: "Bu, sənə uyğun paketi təklif etməyə kömək edir.",
+      summaryLabel: "Büdcə",
+      options: [
+        "200 AZN-ə qədər",
+        "200–500 AZN",
+        "500–1000 AZN",
+        "1000 AZN-dən yuxarı",
+        "Hələ bilmirəm"
+      ]
+    },
+    {
+      key: "format",
+      question: "Hansı formatda öyrənməyi üstün tutursan?",
+      subtitle: "Sənin qrafikinə və öyrənmə tərzinə uyğun formatı seçək.",
+      summaryLabel: "Format",
+      options: [
+        "Canlı onlayn dərs",
+        "Qeydə alınmış video dərslər",
+        "Fərdi (1-ə-1) məşğələ",
+        "Qrup halında"
+      ]
+    }
+  ],
+
+  // Əlaqə addımı
+  contact: {
+    title: "Nəhayət, səninlə necə əlaqə saxlayaq?",
+    subtitle: "Adını yaz — təklifi WhatsApp üzərindən birbaşa sənə göndərəcəyik.",
+    nameLabel: "Ad, Soyad",
+    namePlaceholder: "Məsələn: Aygün Məmmədova"
+  },
+
+  // Nəticə ekranı
+  result: {
+    title: "Əla, hazırdır!",
+    subtitle: "Aşağıdakı düyməyə bas — WhatsApp açılacaq və mesaj artıq hazır olacaq. Sadəcə göndər düyməsinə basmaq qalır.",
+    button: "WhatsApp ilə göndər"
+  },
+
+  // WhatsApp-a göndəriləcək mesajın şablonu
+  buildMessage(answers){
+    let msg = `Salam! Kurs sorğusunu tamamladım:\n\n`;
+    CONFIG.steps.forEach(step => {
+      msg += `• ${step.summaryLabel || step.question}: ${answers[step.key]}\n`;
+    });
+    msg += `\nAd: ${answers.name}\n\nMənə uyğun kurs təklifini gözləyirəm.`;
+    return msg;
+  }
+};
+
+/* ================================================================
+   MÜHƏRRİK — bu hissəni dəyişməyə ehtiyac yoxdur
+   ================================================================ */
+
+const state = { index: -1, answers: {} }; // -1 = welcome
+const totalSteps = CONFIG.steps.length + 1; // + contact step
+const root = document.getElementById('cardRoot');
+const railEl = document.getElementById('pathRail');
+const stepCountEl = document.getElementById('stepCount');
+
+function buildRail(){
+  railEl.innerHTML = '';
+  const track = document.createElement('div');
+  track.className = 'path-track';
+  const fill = document.createElement('div');
+  fill.className = 'path-fill';
+  fill.id = 'pathFill';
+  track.appendChild(fill);
+
+  const nodeCount = totalSteps;
+  for(let i=0;i<nodeCount;i++){
+    const node = document.createElement('div');
+    node.className = 'path-node';
+    node.style.top = (i/(nodeCount-1))*100 + '%';
+    node.dataset.i = i;
+    track.appendChild(node);
+  }
+  railEl.appendChild(track);
+}
+buildRail();
+
+function updateRail(){
+  const progressIndex = Math.max(state.index, 0);
+  const pct = totalSteps <= 1 ? 0 : (progressIndex/(totalSteps-1))*100;
+  const fill = document.getElementById('pathFill');
+  if(fill) fill.style.height = pct + '%';
+  document.querySelectorAll('.path-node').forEach(n=>{
+    const i = parseInt(n.dataset.i);
+    n.classList.remove('done','active');
+    if(i < progressIndex) n.classList.add('done');
+    else if(i === progressIndex) n.classList.add('active');
+  });
+  stepCountEl.textContent = state.index < 0
+    ? ''
+    : `${Math.min(state.index+1, totalSteps)} / ${totalSteps}`;
+}
+
+function render(){
+  updateRail();
+  if(state.index === -1){ renderWelcome(); return; }
+  if(state.index < CONFIG.steps.length){ renderQuestion(state.index); return; }
+  if(state.index === CONFIG.steps.length){ renderContact(); return; }
+  renderResult();
+}
+
+function renderWelcome(){
+  const w = CONFIG.welcome;
+  root.innerHTML = `
+    <div class="step-view">
+      <div class="hero-badge reveal" style="animation-delay:0s">
+        <span class="badge-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 17 9 11 13 15 21 6"></polyline>
+            <polyline points="15 6 21 6 21 12"></polyline>
+          </svg>
+        </span>
+        ${w.badge}
+      </div>
+      <h1 class="q serif reveal" style="animation-delay:0.1s">${w.title}</h1>
+      <p class="sub reveal" style="animation-delay:0.2s">${w.subtitle}</p>
+      <div class="nav-row reveal" style="animation-delay:0.32s">
+        <button class="btn btn-primary" id="startBtn">${w.button}</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('startBtn').onclick = () => { state.index = 0; render(); };
+}
+
+function renderQuestion(i){
+  const step = CONFIG.steps[i];
+  const options = typeof step.options === 'function' ? step.options(state.answers) : step.options;
+  const selected = state.answers[step.key];
+  const isLong = options.length > 7;
+  root.innerHTML = `
+    <div class="step-view">
+      <div class="eyebrow mono reveal" style="animation-delay:0s">Sual ${i+1}</div>
+      <h1 class="q serif reveal" style="animation-delay:0.08s">${step.question}</h1>
+      <p class="sub reveal" style="animation-delay:0.16s">${step.subtitle || ''}</p>
+      <div class="options${isLong ? ' scrollable' : ''}">
+        ${options.map((opt, oi) => `
+          <button class="opt${selected===opt ? ' selected':''}" data-opt="${oi}" style="animation-delay:${Math.min(oi*0.035, 0.4)}s">
+            <span class="idx">${String(oi+1).padStart(2,'0')}</span>
+            <span>${opt}</span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="nav-row">
+        ${i > 0 ? `<button class="btn btn-ghost" id="backBtn">Geri</button>` : ''}
+      </div>
+    </div>
+  `;
+  root.querySelectorAll('.opt').forEach(btn=>{
+    btn.onclick = () => {
+      const opt = options[parseInt(btn.dataset.opt)];
+      state.answers[step.key] = opt;
+      // kateqoriya dəyişdikdə köhnə alt kateqoriya/məqsəd cavabları etibarsızlaşır
+      if(step.key === 'category'){ delete state.answers.subcategory; delete state.answers.goal; }
+      if(step.key === 'subcategory'){ delete state.answers.goal; }
+      state.index++;
+      render();
+    };
+  });
+  const backBtn = document.getElementById('backBtn');
+  if(backBtn) backBtn.onclick = () => { state.index--; render(); };
+}
+
+function renderContact(){
+  const c = CONFIG.contact;
+  const nameVal = state.answers.name || '';
+  root.innerHTML = `
+    <div class="step-view">
+      <div class="eyebrow mono reveal" style="animation-delay:0s">Son addım</div>
+      <h1 class="q serif reveal" style="animation-delay:0.08s">${c.title}</h1>
+      <p class="sub reveal" style="animation-delay:0.16s">${c.subtitle}</p>
+      <div class="field reveal" style="animation-delay:0.24s">
+        <label for="nameInput">${c.nameLabel}</label>
+        <input type="text" id="nameInput" placeholder="${c.namePlaceholder}" value="${nameVal}">
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-primary" id="nextBtn" ${nameVal.trim() ? '' : 'disabled'}>Davam et</button>
+        <button class="btn btn-ghost" id="backBtn">Geri</button>
+      </div>
+    </div>
+  `;
+  const input = document.getElementById('nameInput');
+  const nextBtn = document.getElementById('nextBtn');
+  input.addEventListener('input', () => {
+    nextBtn.disabled = !input.value.trim();
+  });
+  input.focus();
+  nextBtn.onclick = () => {
+    if(!input.value.trim()) return;
+    state.answers.name = input.value.trim();
+    state.index++;
+    render();
+  };
+  document.getElementById('backBtn').onclick = () => { state.index--; render(); };
+}
+
+function renderResult(){
+  const r = CONFIG.result;
+  root.innerHTML = `
+    <div class="step-view">
+      <svg class="seal" viewBox="0 0 56 56" fill="none">
+        <circle cx="28" cy="28" r="24"></circle>
+        <path d="M18 28.5 L24.5 35 L38 20"></path>
+      </svg>
+      <div class="eyebrow mono">Hazırdır</div>
+      <h1 class="q serif">${r.title}</h1>
+      <p class="sub">${r.subtitle}</p>
+      <div class="result-summary">
+        ${CONFIG.steps.map(s => `
+          <div class="result-row">
+            <span class="k">${s.summaryLabel || s.question}</span>
+            <span class="v">${state.answers[s.key]}</span>
+          </div>
+        `).join('')}
+        <div class="result-row">
+          <span class="k">Ad</span>
+          <span class="v">${state.answers.name}</span>
+        </div>
+      </div>
+      <div class="nav-row">
+        <a class="btn btn-whatsapp" id="waBtn" target="_blank" rel="noopener">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.001 2C6.478 2 2 6.477 2 12c0 1.99.583 3.844 1.588 5.401L2 22l4.735-1.556A9.947 9.947 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12.001 2zm0 18.2c-1.744 0-3.36-.512-4.723-1.393l-.339-.213-3.14 1.033 1.05-3.06-.221-.351A8.164 8.164 0 013.8 12c0-4.522 3.678-8.2 8.201-8.2 4.522 0 8.2 3.678 8.2 8.2 0 4.523-3.678 8.2-8.2 8.2z"/></svg>
+          ${r.button}
+        </a>
+        <button class="btn btn-ghost" id="editBtn">Cavabları dəyiş</button>
+      </div>
+    </div>
+  `;
+  const msg = CONFIG.buildMessage(state.answers);
+  const waLink = `https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`;
+  document.getElementById('waBtn').href = waLink;
+  document.getElementById('editBtn').onclick = () => { state.index = 0; render(); };
+}
+
+render();
+</script>
+
+</body>
+</html>
